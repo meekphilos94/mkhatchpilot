@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "hatch-pilot",
-    "slug": "hatch-pilot",
+    "name": "MK Hatch Pilot",
+    "slug": "mk-hatch-pilot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

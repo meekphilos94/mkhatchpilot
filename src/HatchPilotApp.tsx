@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -7,14 +8,9 @@ import {
   View,
 } from 'react-native';
 
-import {
-  activeBatch,
-  batches,
-  marketplaceDrafts,
-  reminders,
-  setupChecklist,
-} from './data/mockData';
-import { hasFirebaseConfig } from './lib/firebase';
+import { DashboardReminder } from './data/mockData';
+import { useAppData } from './hooks/useAppData';
+import { useFirebaseSession } from './providers/FirebaseProvider';
 import { colors } from './theme';
 
 type TabKey = 'overview' | 'batches' | 'marketplace' | 'profile';
@@ -28,22 +24,36 @@ const tabs: { key: TabKey; label: string }[] = [
 
 export function HatchPilotApp() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  const { configured, loading: sessionLoading, authError, user } = useFirebaseSession();
+  const {
+    status,
+    loading: dataLoading,
+    error,
+    activeBatch,
+    batches,
+    reminders,
+    marketplaceDrafts,
+    setupChecklist,
+  } = useAppData();
   const daysLeft = useMemo(
     () => activeBatch.totalDays - activeBatch.currentDay,
-    [],
+    [activeBatch.currentDay, activeBatch.totalDays],
   );
+  const badgeLabel = configured
+    ? sessionLoading || dataLoading
+      ? 'Connecting Firebase'
+      : 'Firebase live'
+    : 'Demo mode';
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.kicker}>Hatch pilot</Text>
+          <Text style={styles.kicker}>MK Hatch Pilot</Text>
           <Text style={styles.title}>From incubator to marketplace</Text>
         </View>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            {hasFirebaseConfig() ? 'Firebase ready' : 'Firebase setup needed'}
-          </Text>
+          <Text style={styles.badgeText}>{badgeLabel}</Text>
         </View>
       </View>
 
@@ -51,11 +61,43 @@ export function HatchPilotApp() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {configured ? (
+          <View style={styles.infoBanner}>
+            {sessionLoading || dataLoading ? <ActivityIndicator color={colors.primary} /> : null}
+            <View style={styles.flexOne}>
+              <Text style={styles.infoBannerTitle}>
+                {user ? 'Connected to Firebase' : 'Preparing Firebase session'}
+              </Text>
+              <Text style={styles.infoBannerText}>
+                {authError ?? error ?? `Signed in session: ${user?.uid ?? 'waiting for user'}`}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.infoBanner}>
+            <View style={styles.flexOne}>
+              <Text style={styles.infoBannerTitle}>Firebase keys still needed</Text>
+              <Text style={styles.infoBannerText}>
+                Add your Expo public Firebase values to `.env` and the app will switch from demo
+                data to live account data automatically.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {activeTab === 'overview' ? (
-          <OverviewTab daysLeft={daysLeft} />
+          <OverviewTab
+            daysLeft={daysLeft}
+            activeBatch={activeBatch}
+            reminders={reminders}
+            setupChecklist={setupChecklist}
+            status={status}
+          />
         ) : null}
-        {activeTab === 'batches' ? <BatchesTab /> : null}
-        {activeTab === 'marketplace' ? <MarketplaceTab /> : null}
+        {activeTab === 'batches' ? <BatchesTab batches={batches} /> : null}
+        {activeTab === 'marketplace' ? (
+          <MarketplaceTab marketplaceDrafts={marketplaceDrafts} />
+        ) : null}
         {activeTab === 'profile' ? <ProfileTab /> : null}
       </ScrollView>
 
@@ -82,7 +124,29 @@ export function HatchPilotApp() {
   );
 }
 
-function OverviewTab({ daysLeft }: { daysLeft: number }) {
+function OverviewTab({
+  daysLeft,
+  activeBatch,
+  reminders,
+  setupChecklist,
+  status,
+}: {
+  daysLeft: number;
+  activeBatch: {
+    name: string;
+    eggType: string;
+    incubatorName: string;
+    currentDay: number;
+    totalDays: number;
+    fertileCount: number;
+    targetTemp: string;
+    targetHumidity: string;
+    nextTask: string;
+  };
+  reminders: DashboardReminder[];
+  setupChecklist: string[];
+  status: 'demo' | 'live';
+}) {
   return (
     <View style={styles.sectionStack}>
       <View style={styles.heroCard}>
@@ -109,12 +173,19 @@ function OverviewTab({ daysLeft }: { daysLeft: number }) {
         </View>
       </View>
 
-      <SectionTitle title="What to do today" subtitle="Keep the app practical and low-friction for repeat use." />
+      <SectionTitle
+        title="What to do today"
+        subtitle={
+          status === 'live'
+            ? 'This view is ready to pull daily tasks from your real Firebase data.'
+            : 'Keep the app practical and low-friction for repeat use.'
+        }
+      />
       <View style={styles.card}>
         {reminders.map((reminder) => (
-          <View key={reminder} style={styles.listRow}>
+          <View key={reminder.id} style={styles.listRow}>
             <View style={styles.dot} />
-            <Text style={styles.listText}>{reminder}</Text>
+            <Text style={styles.listText}>{reminder.message}</Text>
           </View>
         ))}
       </View>
@@ -141,7 +212,23 @@ function OverviewTab({ daysLeft }: { daysLeft: number }) {
   );
 }
 
-function BatchesTab() {
+function BatchesTab({
+  batches,
+}: {
+  batches: Array<{
+    id: string;
+    name: string;
+    eggType: string;
+    quantity: number;
+    incubatorName: string;
+    stage: string;
+    currentDay: number;
+    totalDays: number;
+    targetTemp: string;
+    targetHumidity: string;
+    nextTask: string;
+  }>;
+}) {
   return (
     <View style={styles.sectionStack}>
       <SectionTitle
@@ -173,7 +260,18 @@ function BatchesTab() {
   );
 }
 
-function MarketplaceTab() {
+function MarketplaceTab({
+  marketplaceDrafts,
+}: {
+  marketplaceDrafts: Array<{
+    id: string;
+    title: string;
+    location: string;
+    quantity: number;
+    price: string;
+    status: string;
+  }>;
+}) {
   return (
     <View style={styles.sectionStack}>
       <SectionTitle
@@ -301,6 +399,28 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 12,
     fontWeight: '700',
+  },
+  infoBanner: {
+    backgroundColor: colors.cardAlt,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    marginBottom: 18,
+  },
+  infoBannerTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  infoBannerText: {
+    color: colors.mutedText,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
   },
   scrollContent: {
     paddingHorizontal: 20,

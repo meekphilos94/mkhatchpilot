@@ -1,3 +1,11 @@
+import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
+import {
+  Auth,
+  getAuth,
+  initializeAuth,
+} from 'firebase/auth';
+import { Firestore, getFirestore } from 'firebase/firestore';
+
 export interface FirebaseConfig {
   apiKey: string;
   authDomain: string;
@@ -22,4 +30,36 @@ export function getFirebaseConfig() {
 
 export function hasFirebaseConfig() {
   return Object.values(firebaseConfig).every(Boolean);
+}
+
+export function getFirebaseApp(): FirebaseApp | null {
+  if (!hasFirebaseConfig()) {
+    return null;
+  }
+
+  return getApps()[0] ?? initializeApp(firebaseConfig);
+}
+
+export function getFirebaseAuth(): Auth | null {
+  const app = getFirebaseApp();
+
+  if (!app) {
+    return null;
+  }
+
+  try {
+    return initializeAuth(app);
+  } catch {
+    return getAuth(app);
+  }
+}
+
+export function getFirestoreDb(): Firestore | null {
+  const app = getFirebaseApp();
+
+  if (!app) {
+    return null;
+  }
+
+  return getFirestore(app);
 }

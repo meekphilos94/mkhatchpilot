@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, StyleSheet, View } from 'react-native';
 
 import { HatchPilotApp } from './src/HatchPilotApp';
+import { FirebaseProvider } from './src/providers/FirebaseProvider';
 import { colors } from './src/theme';
 
 export default function App() {
@@ -9,7 +10,9 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <View style={styles.appFrame}>
-        <HatchPilotApp />
+        <FirebaseProvider>
+          <HatchPilotApp />
+        </FirebaseProvider>
       </View>
     </SafeAreaView>
   );

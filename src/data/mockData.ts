@@ -25,6 +25,11 @@ export interface MarketplaceListingDraft {
   status: 'Draft' | 'Live' | 'Ready to publish';
 }
 
+export interface DashboardReminder {
+  id: string;
+  message: string;
+}
+
 export const activeBatch: HatchBatch = {
   id: 'batch-001',
   name: 'April Village Hatch',
@@ -72,10 +77,10 @@ export const batches: HatchBatch[] = [
   },
 ];
 
-export const reminders = [
-  'Turn Batch 1 eggs at 18:00',
-  'Lockdown starts for Duck Lockdown in 24 hours',
-  'No humidity log recorded yet for today',
+export const reminders: DashboardReminder[] = [
+  { id: 'reminder-1', message: 'Turn Batch 1 eggs at 18:00' },
+  { id: 'reminder-2', message: 'Lockdown starts for Duck Lockdown in 24 hours' },
+  { id: 'reminder-3', message: 'No humidity log recorded yet for today' },
 ];
 
 export const marketplaceDrafts: MarketplaceListingDraft[] = [
