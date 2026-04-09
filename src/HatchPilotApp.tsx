@@ -15,7 +15,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { DashboardReminder } from './data/mockData';
 import { useAppData } from './hooks/useAppData';
 import { useBatchReminders } from './hooks/useBatchReminders';
-import { useGoogleAuth } from './hooks/useGoogleAuth';
 import { useFirebaseSession } from './providers/FirebaseProvider';
 import { colors } from './theme';
 import {
@@ -45,12 +44,6 @@ export function HatchPilotApp() {
     user,
     signOutUser,
   } = useFirebaseSession();
-  const {
-    configured: googleConfigured,
-    error: googleError,
-    loading: googleLoading,
-    signInWithGoogle,
-  } = useGoogleAuth();
   const {
     status,
     loading: dataLoading,
@@ -188,11 +181,7 @@ export function HatchPilotApp() {
         {activeTab === 'profile' ? (
           <ProfileTab
             configured={configured}
-            googleConfigured={googleConfigured}
-            googleError={googleError}
-            googleLoading={googleLoading}
             firebaseCheckResult={firebaseCheckResult}
-            onGoogleSignIn={signInWithGoogle}
             onRunFirebaseCheck={runFirebaseCheck}
             onSeedStarterData={seedStarterData}
             onSignOut={signOutUser}
@@ -1513,11 +1502,7 @@ function MarketplaceTab({
 
 function ProfileTab({
   configured,
-  googleConfigured,
-  googleError,
-  googleLoading,
   firebaseCheckResult,
-  onGoogleSignIn,
   onRunFirebaseCheck,
   onSeedStarterData,
   onSignOut,
@@ -1526,11 +1511,7 @@ function ProfileTab({
   user,
 }: {
   configured: boolean;
-  googleConfigured: boolean;
-  googleError: string | null;
-  googleLoading: boolean;
   firebaseCheckResult: string | null;
-  onGoogleSignIn: () => Promise<void>;
   onRunFirebaseCheck: () => Promise<void>;
   onSeedStarterData: () => Promise<void>;
   onSignOut: () => Promise<void>;
@@ -1559,14 +1540,6 @@ function ProfileTab({
       Alert.alert('Starter data created', 'A starter batch, daily log, and listing draft were added.');
     } catch {
       Alert.alert('Seeding failed', 'The app could not create starter Firebase data.');
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    try {
-      await onGoogleSignIn();
-    } catch {
-      Alert.alert('Google sign-in failed', 'Please check the Google client IDs and try again.');
     }
   }
 
@@ -1606,27 +1579,13 @@ function ProfileTab({
         <Text style={styles.listText}>
           Providers: {user?.providerData?.map((provider) => provider.providerId).join(', ') || 'anonymous'}
         </Text>
-
-        <Pressable
-          onPress={handleGoogleSignIn}
-          disabled={!googleConfigured || googleLoading}
-          style={[styles.secondaryButton, (!googleConfigured || googleLoading) && styles.primaryButtonDisabled]}
-        >
-          {googleLoading ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <Text style={styles.secondaryButtonText}>
-              {googleConfigured ? 'Upgrade with Google' : 'Google sign-in needs client IDs'}
-            </Text>
-          )}
-        </Pressable>
-
-        {googleError ? (
-          <View style={styles.infoResultCard}>
-            <Text style={styles.fieldLabel}>Google sign-in</Text>
-            <Text style={styles.listText}>{googleError}</Text>
-          </View>
-        ) : null}
+        <View style={styles.infoResultCard}>
+          <Text style={styles.fieldLabel}>Google sign-in</Text>
+          <Text style={styles.listText}>
+            Google sign-in is temporarily disabled in the phone build while we stabilize Android startup.
+            The rest of the app should still work with anonymous Firebase sessions.
+          </Text>
+        </View>
 
         <Pressable onPress={handleSignOut} style={styles.dangerButton}>
           <Text style={styles.primaryButtonText}>Sign out</Text>

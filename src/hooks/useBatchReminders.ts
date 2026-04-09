@@ -1,11 +1,6 @@
 import { useState } from 'react';
 
-import {
-  ReminderBatch,
-  cancelBatchReminders,
-  requestNotificationAccess,
-  scheduleBatchReminders,
-} from '../lib/notifications';
+import type { ReminderBatch } from '../lib/notifications';
 
 export function useBatchReminders() {
   const [loading, setLoading] = useState(false);
@@ -15,6 +10,9 @@ export function useBatchReminders() {
     setLoading(true);
 
     try {
+      const { requestNotificationAccess, scheduleBatchReminders } = await import(
+        '../lib/notifications'
+      );
       const access = await requestNotificationAccess();
 
       if (!access.granted) {
@@ -34,6 +32,7 @@ export function useBatchReminders() {
     setLoading(true);
 
     try {
+      const { cancelBatchReminders } = await import('../lib/notifications');
       await cancelBatchReminders(batchId);
       setStatusMessage('Reminders cancelled for this batch.');
     } finally {
