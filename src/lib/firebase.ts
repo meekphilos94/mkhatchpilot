@@ -2,7 +2,6 @@ import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import {
   Auth,
   getAuth,
-  initializeAuth,
 } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
 import { FirebaseStorage, getStorage } from 'firebase/storage';
@@ -25,6 +24,11 @@ const firebaseConfig: FirebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? '',
 };
 
+let firebaseAppInstance: FirebaseApp | null = null;
+let firebaseAuthInstance: Auth | null = null;
+let firestoreInstance: Firestore | null = null;
+let storageInstance: FirebaseStorage | null = null;
+
 export function getFirebaseConfig() {
   return firebaseConfig;
 }
@@ -38,10 +42,18 @@ export function getFirebaseApp(): FirebaseApp | null {
     return null;
   }
 
-  return getApps()[0] ?? initializeApp(firebaseConfig);
+  if (!firebaseAppInstance) {
+    firebaseAppInstance = getApps()[0] ?? initializeApp(firebaseConfig);
+  }
+
+  return firebaseAppInstance;
 }
 
 export function getFirebaseAuth(): Auth | null {
+  if (firebaseAuthInstance) {
+    return firebaseAuthInstance;
+  }
+
   const app = getFirebaseApp();
 
   if (!app) {
@@ -49,28 +61,40 @@ export function getFirebaseAuth(): Auth | null {
   }
 
   try {
-    return initializeAuth(app);
+    firebaseAuthInstance = getAuth(app);
   } catch {
-    return getAuth(app);
+    firebaseAuthInstance = getAuth(app);
   }
+
+  return firebaseAuthInstance;
 }
 
 export function getFirestoreDb(): Firestore | null {
+  if (firestoreInstance) {
+    return firestoreInstance;
+  }
+
   const app = getFirebaseApp();
 
   if (!app) {
     return null;
   }
 
-  return getFirestore(app);
+  firestoreInstance = getFirestore(app);
+  return firestoreInstance;
 }
 
 export function getFirebaseStorage(): FirebaseStorage | null {
+  if (storageInstance) {
+    return storageInstance;
+  }
+
   const app = getFirebaseApp();
 
   if (!app) {
     return null;
   }
 
-  return getStorage(app);
+  storageInstance = getStorage(app);
+  return storageInstance;
 }

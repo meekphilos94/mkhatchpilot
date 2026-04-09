@@ -33,6 +33,9 @@
         "projectId": "0ce1e710-4134-44b5-89cb-84dcab962f7b"
       }
     },
-    "owner": "mtapera20s-organization"
+    "owner": "mtapera20s-organization",
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }
