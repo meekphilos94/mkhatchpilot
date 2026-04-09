@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { User, onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
 
 import { getFirebaseAuth, getFirestoreDb, hasFirebaseConfig } from '../lib/firebase';
 
@@ -15,6 +15,7 @@ interface FirebaseContextValue {
   loading: boolean;
   user: User | null;
   authError: string | null;
+  signOutUser: () => Promise<void>;
 }
 
 const FirebaseContext = createContext<FirebaseContextValue>({
@@ -22,6 +23,7 @@ const FirebaseContext = createContext<FirebaseContextValue>({
   loading: false,
   user: null,
   authError: null,
+  signOutUser: async () => {},
 });
 
 export function FirebaseProvider({ children }: PropsWithChildren) {
@@ -63,12 +65,23 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
     return unsubscribe;
   }, [configured]);
 
+  async function signOutUser() {
+    const auth = getFirebaseAuth();
+
+    if (!auth) {
+      return;
+    }
+
+    await signOut(auth);
+  }
+
   const value = useMemo(
     () => ({
       configured,
       loading,
       user,
       authError,
+      signOutUser,
     }),
     [authError, configured, loading, user],
   );

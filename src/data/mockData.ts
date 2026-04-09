@@ -14,15 +14,19 @@ export interface HatchBatch {
   targetHumidity: string;
   nextTask: string;
   stage: BatchStage;
+  startDate?: string;
+  expectedHatchDate?: string;
 }
 
 export interface MarketplaceListingDraft {
   id: string;
   title: string;
+  category: 'chicks' | 'fertile-eggs' | 'birds' | 'equipment';
   location: string;
   quantity: number;
   price: string;
   status: 'Draft' | 'Live' | 'Ready to publish';
+  imageUrl?: string;
 }
 
 export interface DashboardReminder {
@@ -43,6 +47,8 @@ export const activeBatch: HatchBatch = {
   targetHumidity: '45-55%',
   nextTask: 'Candle the eggs this evening and remove any clears.',
   stage: 'Incubating',
+  startDate: '2026-04-01',
+  expectedHatchDate: '2026-04-22T08:00:00.000Z',
 };
 
 export const batches: HatchBatch[] = [
@@ -60,6 +66,8 @@ export const batches: HatchBatch[] = [
     targetHumidity: '45-50%',
     nextTask: 'Turn eggs before 8pm and top up water channel B.',
     stage: 'Incubating',
+    startDate: '2026-04-04',
+    expectedHatchDate: '2026-04-22T08:00:00.000Z',
   },
   {
     id: 'batch-003',
@@ -74,6 +82,8 @@ export const batches: HatchBatch[] = [
     targetHumidity: '65-70%',
     nextTask: 'Stop turning and increase humidity for lockdown.',
     stage: 'Lockdown',
+    startDate: '2026-03-15',
+    expectedHatchDate: '2026-04-12T08:00:00.000Z',
   },
 ];
 
@@ -87,6 +97,7 @@ export const marketplaceDrafts: MarketplaceListingDraft[] = [
   {
     id: 'listing-1',
     title: 'Day-old Boschveld chicks',
+    category: 'chicks',
     location: 'Harare',
     quantity: 18,
     price: '$1.20 each',
@@ -95,6 +106,7 @@ export const marketplaceDrafts: MarketplaceListingDraft[] = [
   {
     id: 'listing-2',
     title: 'Fertile village chicken eggs',
+    category: 'fertile-eggs',
     location: 'Marondera',
     quantity: 36,
     price: '$0.45 each',

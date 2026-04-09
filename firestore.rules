@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return signedIn() && request.auth.uid == ownerId;
+    }
+
+    match /batches/{batchId} {
+      allow read, delete: if isOwner(resource.data.ownerId);
+      allow create: if isOwner(request.resource.data.ownerId)
+        && request.resource.data.quantitySet is int
+        && request.resource.data.quantitySet > 0
+        && request.resource.data.currentDay is int
+        && request.resource.data.currentDay >= 0
+        && request.resource.data.totalDays is int
+        && request.resource.data.totalDays > 0
+        && request.resource.data.eggType is string
+        && request.resource.data.startDate is string
+        && request.resource.data.expectedHatchDate is string
+        && request.resource.data.status in ['setup', 'active', 'lockdown', 'hatched', 'archived'];
+      allow update: if isOwner(resource.data.ownerId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.quantitySet is int
+        && request.resource.data.quantitySet > 0
+        && request.resource.data.currentDay is int
+        && request.resource.data.currentDay >= 0
+        && request.resource.data.totalDays is int
+        && request.resource.data.totalDays > 0
+        && request.resource.data.status in ['setup', 'active', 'lockdown', 'hatched', 'archived'];
+    }
+
+    match /dailyLogs/{logId} {
+      allow read, delete: if isOwner(resource.data.ownerId);
+      allow create: if isOwner(request.resource.data.ownerId)
+        && request.resource.data.batchId is string
+        && request.resource.data.dayNumber is int
+        && request.resource.data.dayNumber > 0
+        && request.resource.data.temperatureC is number
+        && request.resource.data.humidityPercent is number
+        && request.resource.data.eggsTurned is bool
+        && request.resource.data.waterAdded is bool
+        && request.resource.data.loggedAt is string;
+      allow update: if isOwner(resource.data.ownerId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.batchId == resource.data.batchId
+        && request.resource.data.dayNumber is int
+        && request.resource.data.dayNumber > 0
+        && request.resource.data.temperatureC is number
+        && request.resource.data.humidityPercent is number
+        && request.resource.data.eggsTurned is bool
+        && request.resource.data.waterAdded is bool;
+    }
+
+    match /marketplaceListings/{listingId} {
+      allow read, delete: if isOwner(resource.data.sellerId);
+      allow create: if isOwner(request.resource.data.sellerId)
+        && request.resource.data.title is string
+        && request.resource.data.category in ['chicks', 'fertile-eggs', 'birds', 'equipment']
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0
+        && request.resource.data.price is number
+        && request.resource.data.location is string
+        && request.resource.data.status in ['draft', 'live', 'sold']
+        && request.resource.data.createdAt is string;
+      allow update: if isOwner(resource.data.sellerId)
+        && request.resource.data.sellerId == resource.data.sellerId
+        && request.resource.data.category in ['chicks', 'fertile-eggs', 'birds', 'equipment']
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0
+        && request.resource.data.price is number
+        && request.resource.data.status in ['draft', 'live', 'sold'];
+    }
+  }
+}

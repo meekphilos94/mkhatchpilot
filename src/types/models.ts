@@ -39,8 +39,20 @@ export interface HatchBatchRecord {
   nextTask?: string;
 }
 
+export interface CreateBatchInput {
+  eggType: 'Chicken' | 'Quail' | 'Duck';
+  incubatorName: string;
+  quantitySet: number;
+  startDate: string;
+}
+
+export interface UpdateBatchInput extends CreateBatchInput {
+  batchId: string;
+}
+
 export interface DailyLog {
   id: string;
+  ownerId: string;
   batchId: string;
   loggedAt: string;
   dayNumber: number;
@@ -49,6 +61,20 @@ export interface DailyLog {
   eggsTurned: boolean;
   waterAdded: boolean;
   notes?: string;
+}
+
+export interface CreateDailyLogInput {
+  batchId: string;
+  dayNumber: number;
+  temperatureC: number;
+  humidityPercent: number;
+  eggsTurned: boolean;
+  waterAdded: boolean;
+  notes?: string;
+}
+
+export interface UpdateDailyLogInput extends CreateDailyLogInput {
+  logId: string;
 }
 
 export interface MarketplaceListing {
@@ -64,4 +90,20 @@ export interface MarketplaceListing {
   status: ListingStatus;
   createdAt: string;
   displayPrice?: string;
+  imageUrl?: string;
+}
+
+export interface CreateMarketplaceListingInput {
+  sourceBatchId?: string;
+  title: string;
+  category: 'chicks' | 'fertile-eggs' | 'birds' | 'equipment';
+  quantity: number;
+  price: number;
+  location: string;
+  imageAssetUri?: string;
+}
+
+export interface UpdateMarketplaceListingInput extends CreateMarketplaceListingInput {
+  listingId: string;
+  existingImageUrl?: string;
 }

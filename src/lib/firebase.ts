@@ -5,6 +5,7 @@ import {
   initializeAuth,
 } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
+import { FirebaseStorage, getStorage } from 'firebase/storage';
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -62,4 +63,14 @@ export function getFirestoreDb(): Firestore | null {
   }
 
   return getFirestore(app);
+}
+
+export function getFirebaseStorage(): FirebaseStorage | null {
+  const app = getFirebaseApp();
+
+  if (!app) {
+    return null;
+  }
+
+  return getStorage(app);
 }
