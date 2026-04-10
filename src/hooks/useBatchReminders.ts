@@ -1,12 +1,13 @@
 import { useState } from 'react';
 
 import type { ReminderBatch } from '../lib/notifications';
+import type { ReminderPreferences } from '../types/models';
 
 export function useBatchReminders() {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  async function enableReminders(batch: ReminderBatch) {
+  async function enableReminders(batch: ReminderBatch, preferences?: ReminderPreferences) {
     setLoading(true);
 
     try {
@@ -20,7 +21,7 @@ export function useBatchReminders() {
         throw new Error(access.message);
       }
 
-      const result = await scheduleBatchReminders(batch);
+      const result = await scheduleBatchReminders(batch, preferences);
       setStatusMessage(result.message);
       return result;
     } finally {

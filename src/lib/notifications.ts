@@ -3,6 +3,8 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import type { ReminderPreferences } from '../types/models';
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
@@ -24,6 +26,14 @@ export interface ReminderBatch {
   startDate?: string;
   expectedHatchDate?: string;
 }
+
+export const defaultReminderPreferences: ReminderPreferences = {
+  enabled: true,
+  dailyLogHour: 7,
+  turningHour: 13,
+  lockdownHour: 9,
+  hatchHour: 8,
+};
 
 export async function requestNotificationAccess() {
   if (!Device.isDevice) {
@@ -95,6 +105,12 @@ function getLockdownDate(batch: ReminderBatch) {
   return hatchDate;
 }
 
+function getLockdownDateAtHour(batch: ReminderBatch, hour: number) {
+  const date = getLockdownDate(batch);
+  date.setHours(hour, 0, 0, 0);
+  return date;
+}
+
 async function scheduleOneTimeReminder(title: string, body: string, date: Date) {
   if (date.getTime() <= Date.now()) {
     return null;
@@ -122,7 +138,10 @@ async function scheduleDailyReminder(title: string, body: string, hour: number, 
   });
 }
 
-export async function scheduleBatchReminders(batch: ReminderBatch) {
+export async function scheduleBatchReminders(
+  batch: ReminderBatch,
+  preferences: ReminderPreferences = defaultReminderPreferences,
+) {
   await cancelBatchReminders(batch.id);
 
   const permission = await requestNotificationAccess();
@@ -135,26 +154,26 @@ export async function scheduleBatchReminders(batch: ReminderBatch) {
     scheduleDailyReminder(
       'Log your hatch batch',
       `Record temperature and humidity for ${batch.name} this morning.`,
-      7,
+      preferences.dailyLogHour,
       0,
     ),
     scheduleDailyReminder(
       'Turn the eggs',
       `Check whether ${batch.name} needs turning and water top-up today.`,
-      13,
+      preferences.turningHour,
       0,
     ),
     scheduleOneTimeReminder(
       'Lockdown starts soon',
       `${batch.name} enters lockdown soon. Raise humidity and stop turning the eggs.`,
-      getLockdownDate(batch),
+      getLockdownDateAtHour(batch, preferences.lockdownHour),
     ),
     scheduleOneTimeReminder(
       'Hatch window is here',
       `${batch.name} is due to hatch. Keep the incubator closed and monitor closely.`,
       batch.expectedHatchDate
-        ? createDateAtHour(batch.expectedHatchDate, 8, 0)
-        : createDateAtHour(new Date().toISOString(), 8, 0),
+        ? createDateAtHour(batch.expectedHatchDate, preferences.hatchHour, 0)
+        : createDateAtHour(new Date().toISOString(), preferences.hatchHour, 0),
     ),
   ]);
 
