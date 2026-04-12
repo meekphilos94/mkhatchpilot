@@ -92,6 +92,24 @@ function accountModeToRoles(mode: AccountMode): AppUserRole[] {
   }
 }
 
+function formatFirebaseBannerMessage(message: string | null | undefined) {
+  if (!message) {
+    return null;
+  }
+
+  const lower = message.toLowerCase();
+
+  if (lower.includes('permission') || lower.includes('insufficient permissions')) {
+    return 'Some live Firebase features still need published rules. Core app sections can still load while we finish setup.';
+  }
+
+  if (lower.includes('index') && lower.includes('create')) {
+    return 'A Firestore index is still building or missing for one of the newer features. The main app can continue while indexes are completed.';
+  }
+
+  return message;
+}
+
 export function HatchPilotApp() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const {
@@ -196,6 +214,7 @@ export function HatchPilotApp() {
       : 'Firebase live'
     : 'Demo mode';
   const bootstrappingProfile = configured && (sessionLoading || (dataLoading && !profile));
+  const firebaseBannerMessage = formatFirebaseBannerMessage(authError ?? error);
 
   if (bootstrappingProfile) {
     return (
@@ -244,7 +263,7 @@ export function HatchPilotApp() {
                 {user ? 'Connected to Firebase' : 'Preparing Firebase session'}
               </Text>
               <Text style={styles.infoBannerText}>
-                {authError ?? error ?? `Signed in session: ${user?.uid ?? 'waiting for user'}`}
+                {firebaseBannerMessage ?? `Signed in session: ${user?.uid ?? 'waiting for user'}`}
               </Text>
             </View>
           </View>
@@ -4358,6 +4377,13 @@ function ProfileTab({
             <Text style={styles.listText}>{firebaseCheckResult}</Text>
           </View>
         ) : null}
+        <View style={styles.infoResultCard}>
+          <Text style={styles.fieldLabel}>Live Firebase checklist</Text>
+          <Text style={styles.listText}>Publish the latest Firestore rules after new marketplace or candling features are added.</Text>
+          <Text style={styles.listText}>Create any Firestore indexes the app or Firebase Console asks for during live browsing.</Text>
+          <Text style={styles.listText}>Keep `savedMarketplaceListings`, `candlingRecords`, inquiries, and messages in sync with your live rules.</Text>
+          <Text style={styles.listText}>If the top banner mentions permissions, it usually means setup is incomplete, not that the whole app is broken.</Text>
+        </View>
       </View>
     </View>
   );

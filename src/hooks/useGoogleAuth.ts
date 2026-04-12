@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 
 import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import {
   GoogleAuthProvider,
@@ -29,10 +31,22 @@ export function useGoogleAuth() {
     googleConfig.androidClientId || googleConfig.iosClientId || googleConfig.webClientId,
   );
 
+  const redirectUri = useMemo(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+
+    return makeRedirectUri({
+      scheme: 'mkhatchpilot',
+      path: 'auth',
+    });
+  }, []);
+
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     androidClientId: googleConfig.androidClientId,
     iosClientId: googleConfig.iosClientId,
     webClientId: googleConfig.webClientId,
+    redirectUri,
   });
 
   useEffect(() => {
