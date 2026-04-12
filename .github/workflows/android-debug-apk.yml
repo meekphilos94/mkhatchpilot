@@ -1,4 +1,4 @@
-name: Android Debug APK
+name: Android Release APK
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - master
 
 jobs:
-  build-debug-apk:
+  build-release-apk:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -36,13 +36,13 @@ jobs:
       - name: Prebuild Android project
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
-      - name: Upload debug APK
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: mk-hatch-pilot-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: mk-hatch-pilot-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
