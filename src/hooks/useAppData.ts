@@ -368,15 +368,19 @@ export function useAppData() {
   const pendingProfileRef = useRef<AppUser | null>(null);
   const purchaseLookupKeyRef = useRef<string | null>(null);
   const [profile, setProfile] = useState<AppUser | null>(configured ? null : defaultProfile);
-  const [batches, setBatches] = useState(defaultState.batches);
-  const [marketplaceDrafts, setMarketplaceDrafts] = useState(defaultState.marketplaceDrafts);
-  const [publicMarketplaceListings, setPublicMarketplaceListings] = useState(
-    defaultState.publicMarketplaceListings,
+  const [batches, setBatches] = useState(configured ? [] : defaultState.batches);
+  const [marketplaceDrafts, setMarketplaceDrafts] = useState(
+    configured ? [] : defaultState.marketplaceDrafts,
   );
-  const [dailyLogs, setDailyLogs] = useState(demoDailyLogs);
-  const [candlingRecords, setCandlingRecords] = useState(demoCandlingRecords);
-  const [listingInquiries, setListingInquiries] = useState(demoListingInquiries);
-  const [marketplaceMessages, setMarketplaceMessages] = useState(demoMarketplaceMessages);
+  const [publicMarketplaceListings, setPublicMarketplaceListings] = useState(
+    configured ? [] : defaultState.publicMarketplaceListings,
+  );
+  const [dailyLogs, setDailyLogs] = useState(configured ? [] : demoDailyLogs);
+  const [candlingRecords, setCandlingRecords] = useState(configured ? [] : demoCandlingRecords);
+  const [listingInquiries, setListingInquiries] = useState(configured ? [] : demoListingInquiries);
+  const [marketplaceMessages, setMarketplaceMessages] = useState(
+    configured ? [] : demoMarketplaceMessages,
+  );
   const [savedMarketplaceListings, setSavedMarketplaceListings] = useState<SavedMarketplaceListing[]>([]);
   const [latestVerificationRequest, setLatestVerificationRequest] =
     useState<SellerVerificationRequest | null>(null);
@@ -648,7 +652,7 @@ export function useAppData() {
         setPublicMarketplaceListings(nextListings);
       },
       () => {
-        setPublicMarketplaceListings(defaultState.publicMarketplaceListings);
+        setPublicMarketplaceListings([]);
       },
     );
 
@@ -699,7 +703,7 @@ export function useAppData() {
         setListingInquiries(nextInquiries);
       },
       (snapshotError) => {
-        setListingInquiries(demoListingInquiries);
+        setListingInquiries([]);
 
         if (!isPermissionDenied(snapshotError)) {
           setError(
@@ -747,7 +751,7 @@ export function useAppData() {
         setMarketplaceMessages(nextMessages);
       },
       (snapshotError) => {
-        setMarketplaceMessages(demoMarketplaceMessages);
+        setMarketplaceMessages([]);
 
         if (!isPermissionDenied(snapshotError)) {
           setError(

@@ -27,9 +27,17 @@ export function useGoogleAuth() {
     [],
   );
 
-  const configured = Boolean(
-    googleConfig.androidClientId || googleConfig.iosClientId || googleConfig.webClientId,
-  );
+  const configured = useMemo(() => {
+    if (Platform.OS === 'android') {
+      return Boolean(googleConfig.androidClientId);
+    }
+
+    if (Platform.OS === 'ios') {
+      return Boolean(googleConfig.iosClientId);
+    }
+
+    return Boolean(googleConfig.webClientId);
+  }, [googleConfig.androidClientId, googleConfig.iosClientId, googleConfig.webClientId]);
 
   const redirectUri = useMemo(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -84,7 +92,13 @@ export function useGoogleAuth() {
 
   async function signInWithGoogle() {
     if (!configured || !request) {
-      setError('Google sign-in is not configured yet.');
+      setError(
+        Platform.OS === 'android'
+          ? 'Google sign-in is not configured for Android yet.'
+          : Platform.OS === 'ios'
+            ? 'Google sign-in is not configured for iPhone yet.'
+            : 'Google sign-in is not configured for web yet.',
+      );
       return;
     }
 

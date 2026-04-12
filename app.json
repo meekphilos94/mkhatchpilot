@@ -15,10 +15,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mkhatchpilot"
+      "bundleIdentifier": "com.mkhatchpilot",
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.mkhatchpilot",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
