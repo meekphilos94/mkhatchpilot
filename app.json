@@ -15,12 +15,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mkhatchpilot",
+      "bundleIdentifier": "com.mkhatchpilot.app",
       "buildNumber": "1"
     },
     "android": {
-      "package": "com.mkhatchpilot",
-      "versionCode": 1,
+      "package": "com.mkhatchpilot.app",
+      "versionCode": 3,
+      "blockedPermissions": [
+        "android.permission.CAMERA"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
