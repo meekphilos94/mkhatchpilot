@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - master
+      - main
+      - copilot/check-app-readiness-and-build
 
 jobs:
   build-release-android:

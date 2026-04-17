@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+      - master
+      - copilot/check-app-readiness-and-build
 
 jobs:
   build-apk:
