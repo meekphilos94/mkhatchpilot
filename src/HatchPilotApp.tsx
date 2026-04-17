@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   ActivityIndicator,
@@ -67,6 +67,49 @@ const birdEmojis: Record<string, string> = {
   Pigeon: '🕊️',
   Peafowl: '🦚',
 };
+
+// Wikipedia article titles used to fetch real bird photos at runtime
+const WIKIPEDIA_BIRD_ARTICLES: Record<string, string> = {
+  Chicken: 'Chicken',
+  Quail: 'Japanese_quail',
+  Duck: 'Mallard',
+  Turkey: 'Wild_turkey',
+  Goose: 'Greylag_goose',
+  'Guinea Fowl': 'Helmeted_guineafowl',
+  Pigeon: 'Rock_dove',
+  Peafowl: 'Indian_peafowl',
+};
+
+// Module-level cache so each bird is only fetched once per app session
+const birdImageCache: Record<string, string | null> = {};
+
+function useBirdImage(birdType: string): string | null {
+  const [imageUrl, setImageUrl] = useState<string | null>(
+    birdImageCache[birdType] !== undefined ? birdImageCache[birdType] : null,
+  );
+  const fetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (birdImageCache[birdType] !== undefined || fetchedRef.current) {
+      if (birdImageCache[birdType] !== undefined) setImageUrl(birdImageCache[birdType]);
+      return;
+    }
+    fetchedRef.current = true;
+    const article = WIKIPEDIA_BIRD_ARTICLES[birdType] ?? birdType;
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(article)}`)
+      .then((r) => r.json())
+      .then((data: { thumbnail?: { source?: string } }) => {
+        const url = data.thumbnail?.source ?? null;
+        birdImageCache[birdType] = url;
+        setImageUrl(url);
+      })
+      .catch(() => {
+        birdImageCache[birdType] = null;
+      });
+  }, [birdType]);
+
+  return imageUrl;
+}
 
 type TabKey = 'overview' | 'batches' | 'marketplace' | 'profile';
 
@@ -1375,10 +1418,8 @@ function OverviewTab({
           </View>
           {selectedEggGuide ? (
             <View style={styles.infoResultCard}>
+              <BirdHeroImage eggType={selectedEggGuide.eggType} />
               <View style={styles.birdKnowledgeHeader}>
-                <Text style={styles.birdKnowledgeHeroEmoji}>
-                  {birdEmojis[selectedEggGuide.eggType] ?? '🐦'}
-                </Text>
                 <View style={styles.flexOne}>
                   <Text style={styles.cardTitle}>{selectedEggGuide.eggType}</Text>
                   <Text style={styles.cardSubtitle}>{selectedEggGuide.totalDays}-day incubation</Text>
@@ -2055,10 +2096,8 @@ function OverviewTab({
         </View>
         {selectedEggGuide ? (
           <>
+            <BirdHeroImage eggType={selectedEggGuide.eggType} />
             <View style={styles.birdKnowledgeHeader}>
-              <Text style={styles.birdKnowledgeHeroEmoji}>
-                {birdEmojis[selectedEggGuide.eggType] ?? '🐦'}
-              </Text>
               <View style={styles.flexOne}>
                 <Text style={styles.cardTitle}>{selectedEggGuide.eggType}</Text>
                 <Text style={styles.cardSubtitle}>{selectedEggGuide.totalDays}-day incubation</Text>
@@ -4733,6 +4772,19 @@ function ToggleChip({
   );
 }
 
+function BirdHeroImage({ eggType }: { eggType: string }) {
+  const imageUrl = useBirdImage(eggType);
+
+  if (imageUrl) {
+    return <Image source={{ uri: imageUrl }} style={styles.birdHeroImage} />;
+  }
+  return (
+    <View style={styles.birdHeroImagePlaceholder}>
+      <Text style={styles.birdHeroFallbackEmoji}>{birdEmojis[eggType] ?? '🐦'}</Text>
+    </View>
+  );
+}
+
 function BirdTypeChip({
   label,
   selected,
@@ -4742,14 +4794,18 @@ function BirdTypeChip({
   selected: boolean;
   onPress: () => void;
 }) {
-  const emoji = birdEmojis[label] ?? '🐦';
+  const imageUrl = useBirdImage(label);
 
   return (
     <Pressable
       onPress={onPress}
       style={[styles.birdTypeChip, selected && styles.birdTypeChipActive]}
     >
-      <Text style={styles.birdTypeEmoji}>{emoji}</Text>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.birdTypeImage} />
+      ) : (
+        <Text style={styles.birdTypeEmoji}>{birdEmojis[label] ?? '🐦'}</Text>
+      )}
       <Text style={[styles.birdTypeLabel, selected && styles.birdTypeLabelActive]}>{label}</Text>
     </Pressable>
   );
@@ -5598,22 +5654,36 @@ const styles = StyleSheet.create({
   },
   // Bird type chip
   birdTypeChip: {
-    width: 76,
+    width: 82,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 6,
     borderRadius: 18,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.background,
-    gap: 4,
+    gap: 6,
   },
   birdTypeChipActive: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.primary,
   },
+  birdTypeImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.border,
+  },
   birdTypeEmoji: {
-    fontSize: 34,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: 56,
+    fontSize: 32,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
   },
   birdTypeLabel: {
     color: colors.text,
@@ -5624,13 +5694,30 @@ const styles = StyleSheet.create({
   birdTypeLabelActive: {
     color: colors.primary,
   },
-  // Bird knowledge header
+  // Bird knowledge hero
   birdKnowledgeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    marginTop: 8,
   },
-  birdKnowledgeHeroEmoji: {
-    fontSize: 52,
+  birdHeroImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: colors.border,
+    marginBottom: 12,
+  },
+  birdHeroImagePlaceholder: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: colors.border,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  birdHeroFallbackEmoji: {
+    fontSize: 64,
   },
 });
