@@ -436,6 +436,16 @@ export function HatchPilotApp() {
   );
 }
 
+const AUTH_ERROR_CODES = {
+  USER_NOT_FOUND: 'user-not-found',
+  WRONG_PASSWORD: 'wrong-password',
+  INVALID_CREDENTIAL: 'invalid-credential',
+  EMAIL_IN_USE: 'email-already-in-use',
+  WEAK_PASSWORD: 'weak-password',
+  INVALID_EMAIL: 'invalid-email',
+  TOO_MANY_REQUESTS: 'too-many-requests',
+} as const;
+
 function AuthScreen({
   authError,
   onSignInWithEmail,
@@ -454,19 +464,23 @@ function AuthScreen({
   const [localError, setLocalError] = useState<string | null>(null);
 
   function formatAuthError(message: string) {
-    if (message.includes('user-not-found') || message.includes('wrong-password') || message.includes('invalid-credential')) {
+    if (
+      message.includes(AUTH_ERROR_CODES.USER_NOT_FOUND) ||
+      message.includes(AUTH_ERROR_CODES.WRONG_PASSWORD) ||
+      message.includes(AUTH_ERROR_CODES.INVALID_CREDENTIAL)
+    ) {
       return 'Incorrect email or password. Please try again.';
     }
-    if (message.includes('email-already-in-use')) {
+    if (message.includes(AUTH_ERROR_CODES.EMAIL_IN_USE)) {
       return 'An account with this email already exists. Try signing in instead.';
     }
-    if (message.includes('weak-password')) {
+    if (message.includes(AUTH_ERROR_CODES.WEAK_PASSWORD)) {
       return 'Password is too weak. Use at least 6 characters.';
     }
-    if (message.includes('invalid-email')) {
+    if (message.includes(AUTH_ERROR_CODES.INVALID_EMAIL)) {
       return 'Please enter a valid email address.';
     }
-    if (message.includes('too-many-requests')) {
+    if (message.includes(AUTH_ERROR_CODES.TOO_MANY_REQUESTS)) {
       return 'Too many attempts. Please wait a moment before trying again.';
     }
     return message;
@@ -588,7 +602,7 @@ function AuthScreen({
 
           <Pressable onPress={switchMode} style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>
-              {mode === 'signup' ? 'Already have an account? Sign in' : "New here? Create account"}
+              {mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create account'}
             </Text>
           </Pressable>
 

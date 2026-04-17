@@ -1,6 +1,7 @@
 import {
   PropsWithChildren,
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -68,7 +69,7 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
     return unsubscribe;
   }, [configured]);
 
-  async function signOutUser() {
+  const signOutUser = useCallback(async () => {
     const auth = getFirebaseAuth();
 
     if (!auth) {
@@ -76,9 +77,9 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
     }
 
     await signOut(auth);
-  }
+  }, []);
 
-  async function signInWithEmail(email: string, password: string) {
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
     const auth = getFirebaseAuth();
 
     if (!auth) {
@@ -87,9 +88,9 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
 
     setAuthError(null);
     await signInWithEmailAndPassword(auth, email, password);
-  }
+  }, []);
 
-  async function signUpWithEmail(email: string, password: string) {
+  const signUpWithEmail = useCallback(async (email: string, password: string) => {
     const auth = getFirebaseAuth();
 
     if (!auth) {
@@ -98,9 +99,9 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
 
     setAuthError(null);
     await createUserWithEmailAndPassword(auth, email, password);
-  }
+  }, []);
 
-  async function signInAsGuest() {
+  const signInAsGuest = useCallback(async () => {
     const auth = getFirebaseAuth();
 
     if (!auth) {
@@ -115,7 +116,7 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
       setAuthError(error instanceof Error ? error.message : 'Unable to sign in as guest.');
       throw error;
     }
-  }
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -128,7 +129,7 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
       signUpWithEmail,
       signInAsGuest,
     }),
-    [authError, configured, loading, user],
+    [authError, configured, loading, user, signOutUser, signInWithEmail, signUpWithEmail, signInAsGuest],
   );
 
   return <FirebaseContext.Provider value={value}>{children}</FirebaseContext.Provider>;
