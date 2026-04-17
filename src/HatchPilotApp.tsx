@@ -245,6 +245,9 @@ export function HatchPilotApp() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerLogo}>
+          <Text style={styles.headerLogoEmoji}>🥚</Text>
+        </View>
         <View style={styles.flexOne}>
           <Text style={styles.kicker}>MK Hatch Pilot</Text>
           <Text style={styles.title}>
