@@ -121,6 +121,9 @@ export function HatchPilotApp() {
     authError,
     user,
     signOutUser,
+    signInWithEmail,
+    signUpWithEmail,
+    signInAsGuest,
   } = useFirebaseSession();
   const {
     status,
@@ -228,6 +231,17 @@ export function HatchPilotApp() {
           We are finishing the Firebase session and profile check before showing onboarding.
         </Text>
       </View>
+    );
+  }
+
+  if (configured && !sessionLoading && !user) {
+    return (
+      <AuthScreen
+        authError={authError}
+        onSignInWithEmail={signInWithEmail}
+        onSignUpWithEmail={signUpWithEmail}
+        onSignInAsGuest={signInAsGuest}
+      />
     );
   }
 
@@ -422,6 +436,184 @@ export function HatchPilotApp() {
   );
 }
 
+function AuthScreen({
+  authError,
+  onSignInWithEmail,
+  onSignUpWithEmail,
+  onSignInAsGuest,
+}: {
+  authError: string | null;
+  onSignInWithEmail: (email: string, password: string) => Promise<void>;
+  onSignUpWithEmail: (email: string, password: string) => Promise<void>;
+  onSignInAsGuest: () => Promise<void>;
+}) {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  function formatAuthError(message: string) {
+    if (message.includes('user-not-found') || message.includes('wrong-password') || message.includes('invalid-credential')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    if (message.includes('email-already-in-use')) {
+      return 'An account with this email already exists. Try signing in instead.';
+    }
+    if (message.includes('weak-password')) {
+      return 'Password is too weak. Use at least 6 characters.';
+    }
+    if (message.includes('invalid-email')) {
+      return 'Please enter a valid email address.';
+    }
+    if (message.includes('too-many-requests')) {
+      return 'Too many attempts. Please wait a moment before trying again.';
+    }
+    return message;
+  }
+
+  async function handleSubmit() {
+    setLocalError(null);
+
+    if (!email.trim()) {
+      setLocalError('Please enter your email address.');
+      return;
+    }
+
+    if (!password) {
+      setLocalError('Please enter your password.');
+      return;
+    }
+
+    if (mode === 'signup' && password.length < 6) {
+      setLocalError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (mode === 'signup') {
+        await onSignUpWithEmail(email.trim(), password);
+      } else {
+        await onSignInWithEmail(email.trim(), password);
+      }
+    } catch (err) {
+      setLocalError(formatAuthError(err instanceof Error ? err.message : 'Sign-in failed. Please try again.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGuestSignIn() {
+    setLocalError(null);
+    setLoading(true);
+
+    try {
+      await onSignInAsGuest();
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Could not start guest session.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function switchMode() {
+    setMode(mode === 'signup' ? 'signin' : 'signup');
+    setLocalError(null);
+  }
+
+  const displayError = localError ?? authError;
+
+  return (
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <View style={styles.authHero}>
+          <Text style={styles.authEmoji}>🥚</Text>
+          <Text style={styles.kicker}>MK Hatch Pilot</Text>
+          <Text style={styles.onboardingTitle}>
+            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+          </Text>
+          <Text style={styles.onboardingSubtitle}>
+            {mode === 'signup'
+              ? 'Sign up to track hatch batches and sell chicks in the marketplace.'
+              : 'Sign in to pick up where you left off.'}
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <LabeledField label="Email address">
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.mutedText}
+              style={styles.input}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+            />
+          </LabeledField>
+
+          <LabeledField label="Password">
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder={mode === 'signup' ? 'Create a password (6+ characters)' : 'Your password'}
+              placeholderTextColor={colors.mutedText}
+              style={styles.input}
+              secureTextEntry
+            />
+          </LabeledField>
+
+          {displayError ? (
+            <View style={styles.errorInline}>
+              <Text style={styles.errorInlineText}>{displayError}</Text>
+            </View>
+          ) : null}
+
+          <Pressable
+            onPress={handleSubmit}
+            disabled={loading}
+            style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>
+                {mode === 'signup' ? 'Create account' : 'Sign in'}
+              </Text>
+            )}
+          </Pressable>
+
+          <Pressable onPress={switchMode} style={styles.secondaryButton}>
+            <Text style={styles.secondaryButtonText}>
+              {mode === 'signup' ? 'Already have an account? Sign in' : "New here? Create account"}
+            </Text>
+          </Pressable>
+
+          <View style={styles.authDivider}>
+            <View style={styles.authDividerLine} />
+            <Text style={styles.authDividerText}>or</Text>
+            <View style={styles.authDividerLine} />
+          </View>
+
+          <Pressable
+            onPress={handleGuestSignIn}
+            disabled={loading}
+            style={[styles.ghostButton, loading && styles.primaryButtonDisabled]}
+          >
+            <Text style={styles.ghostButtonText}>Continue as guest</Text>
+          </Pressable>
+          <Text style={styles.authGuestNote}>
+            Guest sessions are anonymous. Your data stays on this device only.
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 function OnboardingScreen({
   configured,
   loading,
@@ -474,6 +666,7 @@ function OnboardingScreen({
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.onboardingContent} showsVerticalScrollIndicator={false}>
         <View style={styles.onboardingHero}>
+          <Text style={styles.onboardingEmoji}>🥚</Text>
           <Text style={styles.kicker}>MK Hatch Pilot</Text>
           <Text style={styles.onboardingTitle}>Set up your poultry home base</Text>
           <Text style={styles.onboardingSubtitle}>
@@ -1196,9 +1389,9 @@ function OverviewTab({
           </Text>
 
           <View style={styles.heroMetrics}>
-            <MetricCard label="Day" value={`${activeBatch.currentDay}/${activeBatch.totalDays}`} />
-            <MetricCard label="Days left" value={`${daysLeft}`} />
-            <MetricCard label="Fertile" value={`${activeBatch.fertileCount}`} />
+            <MetricCard label="Day" value={`${activeBatch.currentDay}/${activeBatch.totalDays}`} dark />
+            <MetricCard label="Days left" value={`${daysLeft}`} dark />
+            <MetricCard label="Fertile" value={`${activeBatch.fertileCount}`} dark />
           </View>
 
           <View style={styles.progressTrack}>
@@ -1231,6 +1424,7 @@ function OverviewTab({
         <EmptyStateCard
           title="No active batch yet"
           body="Create your first hatch batch in the Batches tab and the daily dashboard will come alive here."
+          emoji="🥚"
         />
       )}
 
@@ -2066,6 +2260,7 @@ function BatchesTab({
         <EmptyStateCard
           title="Buyer account active"
           body="This account is currently set up for buying only. Switch your account type in Profile if you also want to hatch and track batches."
+          emoji="🛒"
         />
       ) : null}
       {canManageBatches ? (
@@ -2115,7 +2310,10 @@ function BatchesTab({
         ) : null}
       </View>
       <Pressable onPress={() => setShowCreateBatch(true)} style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText}>+ New hatch batch</Text>
+        <View style={styles.iconButtonRow}>
+          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.primaryButtonText}>New hatch batch</Text>
+        </View>
       </Pressable>
       <Modal
         visible={showCreateBatch}
@@ -2309,6 +2507,7 @@ function BatchesTab({
         <EmptyStateCard
           title="No batches yet"
           body="Your saved hatch batches will appear here once you create the first one."
+          emoji="📋"
         />
       ) : null}
 
@@ -4055,12 +4254,15 @@ function ProfileTab({
           <Pressable
             onPress={handleGoogleUpgrade}
             disabled={googleLoading}
-            style={[styles.primaryButton, googleLoading && styles.primaryButtonDisabled]}
+            style={[styles.googleButton, googleLoading && styles.primaryButtonDisabled]}
           >
             {googleLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.primary} />
             ) : (
-              <Text style={styles.primaryButtonText}>Upgrade with Google</Text>
+              <View style={styles.iconButtonRow}>
+                <Ionicons name="logo-google" size={18} color={colors.primary} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </View>
             )}
           </Pressable>
         ) : null}
@@ -4472,17 +4674,20 @@ function SectionTitle({
 }) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      <View style={styles.sectionAccentBar} />
+      <View style={styles.flexOne}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      </View>
     </View>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, dark }: { label: string; value: string; dark?: boolean }) {
   return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
+    <View style={[styles.metricCard, dark && styles.metricCardDark]}>
+      <Text style={[styles.metricLabel, dark && styles.metricLabelDark]}>{label}</Text>
+      <Text style={[styles.metricValue, dark && styles.metricValueDark]}>{value}</Text>
     </View>
   );
 }
@@ -4514,11 +4719,12 @@ function ToggleChip({
   );
 }
 
-function EmptyStateCard({ title, body }: { title: string; body: string }) {
+function EmptyStateCard({ title, body, emoji }: { title: string; body: string; emoji?: string }) {
   return (
     <View style={styles.emptyStateCard}>
+      {emoji ? <Text style={styles.emptyStateEmoji}>{emoji}</Text> : null}
       <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.listText}>{body}</Text>
+      <Text style={[styles.listText, { textAlign: 'center' }]}>{body}</Text>
     </View>
   );
 }
@@ -4655,8 +4861,16 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    shadowColor: '#1A2E1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
   kicker: {
     color: colors.accent,
@@ -4707,6 +4921,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
+    paddingTop: 14,
     paddingBottom: 120,
   },
   onboardingContent: {
@@ -4741,6 +4956,11 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 20,
     gap: 14,
+    shadowColor: '#1A2E1E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
   },
   heroEyebrow: {
     color: '#D7E7D2',
@@ -4765,18 +4985,20 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.cardAlt,
     borderRadius: 18,
     padding: 12,
     gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   metricLabel: {
-    color: '#D7E7D2',
+    color: colors.mutedText,
     fontSize: 12,
     fontWeight: '600',
   },
   metricValue: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -4827,7 +5049,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   sectionHeader: {
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   sectionTitle: {
     color: colors.text,
@@ -4846,6 +5070,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: 12,
+    shadowColor: '#1A2E1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   marketplaceCard: {
     backgroundColor: colors.marketplaceSoft,
@@ -5076,10 +5305,16 @@ const styles = StyleSheet.create({
   emptyStateCard: {
     backgroundColor: colors.cardAlt,
     borderRadius: 24,
-    padding: 18,
+    padding: 22,
     borderWidth: 1,
     borderColor: colors.border,
     gap: 8,
+    alignItems: 'center',
+    shadowColor: '#1A2E1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   stagePill: {
     backgroundColor: colors.primarySoft,
@@ -5173,6 +5408,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     flexDirection: 'row',
     gap: 8,
+    shadowColor: '#1A2E1E',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 16,
   },
   tabButton: {
     flex: 1,
@@ -5191,5 +5431,133 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     color: '#FFFFFF',
+  },
+  // Header logo
+  headerLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerLogoEmoji: {
+    fontSize: 24,
+  },
+  // MetricCard dark variant (for inside heroCard)
+  metricCardDark: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 0,
+  },
+  metricLabelDark: {
+    color: '#D7E7D2',
+  },
+  metricValueDark: {
+    color: '#FFFFFF',
+  },
+  // SectionTitle accent bar
+  sectionAccentBar: {
+    width: 4,
+    height: 26,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    marginTop: 2,
+  },
+  // EmptyStateCard emoji
+  emptyStateEmoji: {
+    fontSize: 40,
+    marginBottom: 4,
+  },
+  // Onboarding hero emoji
+  onboardingEmoji: {
+    fontSize: 56,
+    marginBottom: 4,
+  },
+  // Icon row inside buttons
+  iconButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  // Google / secondary identity button
+  googleButton: {
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  googleButtonText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  // Auth screen
+  authContent: {
+    paddingHorizontal: 20,
+    paddingTop: 48,
+    paddingBottom: 40,
+    gap: 24,
+  },
+  authHero: {
+    gap: 10,
+    alignItems: 'center',
+  },
+  authEmoji: {
+    fontSize: 64,
+    marginBottom: 4,
+  },
+  errorInline: {
+    backgroundColor: '#FFF0EC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#F4C4B8',
+  },
+  errorInlineText: {
+    color: colors.danger,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  authDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  authDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  authDividerText: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  ghostButton: {
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  ghostButtonText: {
+    color: colors.mutedText,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  authGuestNote: {
+    color: colors.mutedText,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
   },
 });

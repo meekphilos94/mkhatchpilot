@@ -6,7 +6,14 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { User, onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
+import {
+  User,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
 
 import { getFirebaseAuth, getFirestoreDb, hasFirebaseConfig } from '../lib/firebase';
 
@@ -16,6 +23,9 @@ interface FirebaseContextValue {
   user: User | null;
   authError: string | null;
   signOutUser: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signInAsGuest: () => Promise<void>;
 }
 
 const FirebaseContext = createContext<FirebaseContextValue>({
@@ -24,6 +34,9 @@ const FirebaseContext = createContext<FirebaseContextValue>({
   user: null,
   authError: null,
   signOutUser: async () => {},
+  signInWithEmail: async () => {},
+  signUpWithEmail: async () => {},
+  signInAsGuest: async () => {},
 });
 
 export function FirebaseProvider({ children }: PropsWithChildren) {
@@ -47,19 +60,9 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
-      if (nextUser) {
-        setUser(nextUser);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        await signInAnonymously(auth);
-      } catch (error) {
-        setAuthError(error instanceof Error ? error.message : 'Unable to sign in to Firebase.');
-        setLoading(false);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      setLoading(false);
     });
 
     return unsubscribe;
@@ -75,6 +78,45 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
     await signOut(auth);
   }
 
+  async function signInWithEmail(email: string, password: string) {
+    const auth = getFirebaseAuth();
+
+    if (!auth) {
+      throw new Error('Firebase auth is not available.');
+    }
+
+    setAuthError(null);
+    await signInWithEmailAndPassword(auth, email, password);
+  }
+
+  async function signUpWithEmail(email: string, password: string) {
+    const auth = getFirebaseAuth();
+
+    if (!auth) {
+      throw new Error('Firebase auth is not available.');
+    }
+
+    setAuthError(null);
+    await createUserWithEmailAndPassword(auth, email, password);
+  }
+
+  async function signInAsGuest() {
+    const auth = getFirebaseAuth();
+
+    if (!auth) {
+      throw new Error('Firebase auth is not available.');
+    }
+
+    setAuthError(null);
+
+    try {
+      await signInAnonymously(auth);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Unable to sign in as guest.');
+      throw error;
+    }
+  }
+
   const value = useMemo(
     () => ({
       configured,
@@ -82,6 +124,9 @@ export function FirebaseProvider({ children }: PropsWithChildren) {
       user,
       authError,
       signOutUser,
+      signInWithEmail,
+      signUpWithEmail,
+      signInAsGuest,
     }),
     [authError, configured, loading, user],
   );
