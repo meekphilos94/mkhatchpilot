@@ -57,6 +57,17 @@ const eggTypeOptions: CreateBatchInput['eggType'][] = [
   'Peafowl',
 ];
 
+const birdEmojis: Record<string, string> = {
+  Chicken: '🐔',
+  Quail: '🐦',
+  Duck: '🦆',
+  Turkey: '🦃',
+  Goose: '🪿',
+  'Guinea Fowl': '🐓',
+  Pigeon: '🕊️',
+  Peafowl: '🦚',
+};
+
 type TabKey = 'overview' | 'batches' | 'marketplace' | 'profile';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -1353,25 +1364,26 @@ function OverviewTab({
             Learn the basics before buying chicks, fertile eggs, or your first incubator.
           </Text>
           <View style={styles.choiceRow}>
-            {eggKnowledgeGuides.map((guide) => {
-              const selected = guide.eggType === selectedEggGuide?.eggType;
-
-              return (
-                <Pressable
-                  key={guide.eggType}
-                  onPress={() => setSelectedEggType(guide.eggType)}
-                  style={[styles.choiceChip, selected && styles.choiceChipActive]}
-                >
-                  <Text style={[styles.choiceChipText, selected && styles.choiceChipTextActive]}>
-                    {guide.eggType}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {eggKnowledgeGuides.map((guide) => (
+              <BirdTypeChip
+                key={guide.eggType}
+                label={guide.eggType}
+                selected={guide.eggType === selectedEggGuide?.eggType}
+                onPress={() => setSelectedEggType(guide.eggType)}
+              />
+            ))}
           </View>
           {selectedEggGuide ? (
             <View style={styles.infoResultCard}>
-              <Text style={styles.listText}>Incubation: {selectedEggGuide.totalDays} days</Text>
+              <View style={styles.birdKnowledgeHeader}>
+                <Text style={styles.birdKnowledgeHeroEmoji}>
+                  {birdEmojis[selectedEggGuide.eggType] ?? '🐦'}
+                </Text>
+                <View style={styles.flexOne}>
+                  <Text style={styles.cardTitle}>{selectedEggGuide.eggType}</Text>
+                  <Text style={styles.cardSubtitle}>{selectedEggGuide.totalDays}-day incubation</Text>
+                </View>
+              </View>
               <Text style={styles.listText}>Temperature: {selectedEggGuide.temperature}</Text>
               <Text style={styles.listText}>Humidity: {selectedEggGuide.humidity}</Text>
               <Text style={styles.listText}>Lockdown starts: {selectedEggGuide.lockdownDay}</Text>
@@ -2032,24 +2044,26 @@ function OverviewTab({
       />
       <View style={styles.card}>
         <View style={styles.choiceRow}>
-          {eggKnowledgeGuides.map((guide) => {
-            const selected = guide.eggType === selectedEggGuide?.eggType;
-
-            return (
-              <Pressable
-                key={guide.eggType}
-                onPress={() => setSelectedEggType(guide.eggType)}
-                style={[styles.choiceChip, selected && styles.choiceChipActive]}
-              >
-                <Text style={[styles.choiceChipText, selected && styles.choiceChipTextActive]}>
-                  {guide.eggType}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {eggKnowledgeGuides.map((guide) => (
+            <BirdTypeChip
+              key={guide.eggType}
+              label={guide.eggType}
+              selected={guide.eggType === selectedEggGuide?.eggType}
+              onPress={() => setSelectedEggType(guide.eggType)}
+            />
+          ))}
         </View>
         {selectedEggGuide ? (
           <>
+            <View style={styles.birdKnowledgeHeader}>
+              <Text style={styles.birdKnowledgeHeroEmoji}>
+                {birdEmojis[selectedEggGuide.eggType] ?? '🐦'}
+              </Text>
+              <View style={styles.flexOne}>
+                <Text style={styles.cardTitle}>{selectedEggGuide.eggType}</Text>
+                <Text style={styles.cardSubtitle}>{selectedEggGuide.totalDays}-day incubation</Text>
+              </View>
+            </View>
             <View style={styles.heroMetrics}>
               <MetricCard label="Days" value={`${selectedEggGuide.totalDays}`} />
               <MetricCard label="Temp" value={selectedEggGuide.temperature} />
@@ -2431,21 +2445,14 @@ function BatchesTab({
         ) : null}
 
         <View style={styles.choiceRow}>
-          {eggTypeOptions.map((option) => {
-            const selected = option === eggType;
-
-            return (
-              <Pressable
-                key={option}
-                onPress={() => setEggType(option)}
-                style={[styles.choiceChip, selected && styles.choiceChipActive]}
-              >
-                <Text style={[styles.choiceChipText, selected && styles.choiceChipTextActive]}>
-                  {option}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {eggTypeOptions.map((option) => (
+            <BirdTypeChip
+              key={option}
+              label={option}
+              selected={option === eggType}
+              onPress={() => setEggType(option)}
+            />
+          ))}
         </View>
 
         <LabeledField label="MeekyCart incubator model">
@@ -2567,21 +2574,14 @@ function BatchesTab({
           {editingBatchId === batch.id ? (
             <>
               <View style={styles.choiceRow}>
-                {eggTypeOptions.map((option) => {
-                  const selected = option === editingEggType;
-
-                  return (
-                    <Pressable
-                      key={option}
-                      onPress={() => setEditingEggType(option)}
-                      style={[styles.choiceChip, selected && styles.choiceChipActive]}
-                    >
-                      <Text style={[styles.choiceChipText, selected && styles.choiceChipTextActive]}>
-                        {option}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                {eggTypeOptions.map((option) => (
+                  <BirdTypeChip
+                    key={option}
+                    label={option}
+                    selected={option === editingEggType}
+                    onPress={() => setEditingEggType(option)}
+                  />
+                ))}
               </View>
               <LabeledField label="Incubator name">
                 <TextInput
@@ -4733,6 +4733,28 @@ function ToggleChip({
   );
 }
 
+function BirdTypeChip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const emoji = birdEmojis[label] ?? '🐦';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.birdTypeChip, selected && styles.birdTypeChipActive]}
+    >
+      <Text style={styles.birdTypeEmoji}>{emoji}</Text>
+      <Text style={[styles.birdTypeLabel, selected && styles.birdTypeLabelActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function EmptyStateCard({ title, body, emoji }: { title: string; body: string; emoji?: string }) {
   return (
     <View style={styles.emptyStateCard}>
@@ -5573,5 +5595,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     textAlign: 'center',
+  },
+  // Bird type chip
+  birdTypeChip: {
+    width: 76,
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    gap: 4,
+  },
+  birdTypeChipActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  birdTypeEmoji: {
+    fontSize: 34,
+  },
+  birdTypeLabel: {
+    color: colors.text,
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  birdTypeLabelActive: {
+    color: colors.primary,
+  },
+  // Bird knowledge header
+  birdKnowledgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  birdKnowledgeHeroEmoji: {
+    fontSize: 52,
   },
 });
