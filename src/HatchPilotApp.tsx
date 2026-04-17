@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   ActivityIndicator,
   Alert,
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -57,11 +59,12 @@ const eggTypeOptions: CreateBatchInput['eggType'][] = [
 
 type TabKey = 'overview' | 'batches' | 'marketplace' | 'profile';
 
-const tabs: { key: TabKey; label: string }[] = [
-  { key: 'overview', label: 'Today' },
-  { key: 'batches', label: 'Batches' },
-  { key: 'marketplace', label: 'Market' },
-  { key: 'profile', label: 'Profile' },
+type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
+const tabs: { key: TabKey; label: string; icon: TabIconName; iconActive: TabIconName }[] = [
+  { key: 'overview', label: 'Today', icon: 'calendar-outline', iconActive: 'calendar' },
+  { key: 'batches', label: 'Batches', icon: 'layers-outline', iconActive: 'layers' },
+  { key: 'marketplace', label: 'Market', icon: 'basket-outline', iconActive: 'basket' },
+  { key: 'profile', label: 'Profile', icon: 'person-circle-outline', iconActive: 'person-circle' },
 ];
 
 type AccountMode = 'buyer' | 'seller' | 'both';
@@ -242,9 +245,19 @@ export function HatchPilotApp() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.flexOne}>
           <Text style={styles.kicker}>MK Hatch Pilot</Text>
-          <Text style={styles.title}>From incubator to marketplace</Text>
+          <Text style={styles.title}>
+            {activeTab === 'overview'
+              ? profile?.fullName
+                ? `Hi, ${profile.fullName.split(' ')[0]}`
+                : 'Your hatch dashboard'
+              : activeTab === 'batches'
+                ? 'Your batches'
+                : activeTab === 'marketplace'
+                  ? 'Marketplace'
+                  : 'Your account'}
+          </Text>
         </View>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badgeLabel}</Text>
@@ -255,29 +268,25 @@ export function HatchPilotApp() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {configured ? (
+        {(!configured || sessionLoading || dataLoading || firebaseBannerMessage) ? (
           <View style={styles.infoBanner}>
-            {sessionLoading || dataLoading ? <ActivityIndicator color={colors.primary} /> : null}
+            {(sessionLoading || dataLoading) ? <ActivityIndicator color={colors.primary} /> : null}
             <View style={styles.flexOne}>
               <Text style={styles.infoBannerTitle}>
-                {user ? 'Connected to Firebase' : 'Preparing Firebase session'}
+                {!configured
+                  ? 'Demo mode'
+                  : sessionLoading || dataLoading
+                    ? 'Connecting to Firebase'
+                    : 'Firebase notice'}
               </Text>
               <Text style={styles.infoBannerText}>
-                {firebaseBannerMessage ?? `Signed in session: ${user?.uid ?? 'waiting for user'}`}
+                {!configured
+                  ? 'Add your Expo public Firebase env values to switch from demo data to live account data.'
+                  : firebaseBannerMessage ?? 'Preparing your account.'}
               </Text>
             </View>
           </View>
-        ) : (
-          <View style={styles.infoBanner}>
-            <View style={styles.flexOne}>
-              <Text style={styles.infoBannerTitle}>Firebase keys still needed</Text>
-              <Text style={styles.infoBannerText}>
-                Add your Expo public Firebase values to `.env` and the app will switch from demo
-                data to live account data automatically.
-              </Text>
-            </View>
-          </View>
-        )}
+        ) : null}
 
         {activeTab === 'overview' ? (
           <OverviewTab
@@ -394,9 +403,12 @@ export function HatchPilotApp() {
               onPress={() => setActiveTab(tab.key)}
               style={[styles.tabButton, selected && styles.tabButtonActive]}
             >
-              <Text
-                style={[styles.tabLabel, selected && styles.tabLabelActive]}
-              >
+              <Ionicons
+                name={selected ? tab.iconActive : tab.icon}
+                size={20}
+                color={selected ? '#FFFFFF' : colors.mutedText}
+              />
+              <Text style={[styles.tabLabel, selected && styles.tabLabelActive]}>
                 {tab.label}
               </Text>
             </Pressable>
@@ -1186,6 +1198,17 @@ function OverviewTab({
             <MetricCard label="Fertile" value={`${activeBatch.fertileCount}`} />
           </View>
 
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${Math.min(100, Math.round((activeBatch.currentDay / activeBatch.totalDays) * 100))}%`,
+                },
+              ]}
+            />
+          </View>
+
           <View style={styles.actionStrip}>
             <MiniAction label={`Temp ${activeBatch.targetTemp}`} />
             <MiniAction label={`Humidity ${activeBatch.targetHumidity}`} />
@@ -1925,6 +1948,7 @@ function BatchesTab({
   onDeleteBatch: (batchId: string) => Promise<void>;
   status: 'demo' | 'live';
 }) {
+  const [showCreateBatch, setShowCreateBatch] = useState(false);
   const [eggType, setEggType] = useState<CreateBatchInput['eggType']>('Chicken');
   const [incubatorName, setIncubatorName] = useState('Meeky Smart Incubator');
   const [quantity, setQuantity] = useState('30');
@@ -1967,6 +1991,7 @@ function BatchesTab({
         startDate,
       });
 
+      setShowCreateBatch(false);
       setQuantity('30');
       Alert.alert(
         'Batch created',
@@ -2086,6 +2111,22 @@ function BatchesTab({
           </View>
         ) : null}
       </View>
+      <Pressable onPress={() => setShowCreateBatch(true)} style={styles.primaryButton}>
+        <Text style={styles.primaryButtonText}>+ New hatch batch</Text>
+      </Pressable>
+      <Modal
+        visible={showCreateBatch}
+        animationType="slide"
+        onRequestClose={() => setShowCreateBatch(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>New hatch batch</Text>
+            <Pressable onPress={() => setShowCreateBatch(false)} style={styles.modalCloseButton}>
+              <Text style={styles.modalCloseText}>Close</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Create a new hatch batch</Text>
         <Text style={styles.cardSubtitle}>
@@ -2257,6 +2298,9 @@ function BatchesTab({
           )}
         </Pressable>
       </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
       {batches.length === 0 ? (
         <EmptyStateCard
@@ -2526,6 +2570,7 @@ function MarketplaceTab({
   onUpdateInquiryStatus: (input: UpdateListingInquiryStatusInput) => Promise<void>;
   onDeleteListing: (listingId: string) => Promise<void>;
 }) {
+  const [showCreateListing, setShowCreateListing] = useState(false);
   const [marketFilter, setMarketFilter] = useState<'all' | 'draft' | 'live' | 'sold'>('all');
   const [buyerSearch, setBuyerSearch] = useState('');
   const [buyerLocationFilter, setBuyerLocationFilter] = useState('');
@@ -2679,6 +2724,7 @@ function MarketplaceTab({
         imageAssetUri: imageAssetUri ?? undefined,
         deliveryOption,
       });
+      setShowCreateListing(false);
       setImageAssetUri(null);
       Alert.alert('Listing created', 'Your marketplace draft was saved successfully.');
     } catch {
@@ -3091,7 +3137,11 @@ function MarketplaceTab({
                               : styles.statusChipTextMuted,
                         ]}
                       >
-                        {listing.sellerVerificationStatus === 'verified' ? 'Verified' : 'Pending'}
+                        {listing.sellerVerificationStatus === 'verified'
+                          ? '✓ Verified'
+                          : listing.sellerVerificationStatus === 'pending'
+                            ? '⏳ Pending'
+                            : '○ Unverified'}
                       </Text>
                     </View>
                     <Pressable
@@ -3294,7 +3344,29 @@ function MarketplaceTab({
       ) : null}
 
       {canSell ? (
-      <View style={styles.card}>
+        <Pressable onPress={() => setShowCreateListing(true)} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>+ New listing</Text>
+        </Pressable>
+      ) : (
+        <EmptyStateCard
+          title="Buyer mode active"
+          body="You can browse live listings now. Switch your account type in Profile if you also want to publish and manage listings."
+        />
+      )}
+      <Modal
+        visible={showCreateListing}
+        animationType="slide"
+        onRequestClose={() => setShowCreateListing(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>New listing</Text>
+            <Pressable onPress={() => setShowCreateListing(false)} style={styles.modalCloseButton}>
+              <Text style={styles.modalCloseText}>Close</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
         <Text style={styles.cardTitle}>Create marketplace listing</Text>
         <Text style={styles.cardSubtitle}>
           Start with a draft listing linked to the active hatch batch.
@@ -3426,12 +3498,9 @@ function MarketplaceTab({
           )}
         </Pressable>
       </View>
-      ) : (
-        <EmptyStateCard
-          title="Buyer mode active"
-          body="You can browse live listings now. Switch your account type in Profile if you also want to publish and manage listings."
-        />
-      )}
+          </ScrollView>
+        </View>
+      </Modal>
 
       {canSell && marketplaceDrafts.length === 0 ? (
         <EmptyStateCard
@@ -3457,7 +3526,9 @@ function MarketplaceTab({
               </Text>
             </View>
             <View style={styles.marketBadge}>
-              <Text style={styles.marketBadgeText}>{draft.status}</Text>
+              <Text style={styles.marketBadgeText}>
+                {draft.status === 'Live' ? '● Live' : draft.status === 'Sold' ? '✓ Sold' : '○ Draft'}
+              </Text>
             </View>
           </View>
           {editingListingId === draft.id ? (
@@ -3621,10 +3692,10 @@ function MarketplaceTab({
                     ]}
                   >
                     {draft.sellerVerificationStatus === 'verified'
-                      ? 'Verified seller'
+                      ? '✓ Verified seller'
                       : draft.sellerVerificationStatus === 'pending'
-                        ? 'Verification pending'
-                        : 'Unverified seller'}
+                        ? '⏳ Verification pending'
+                        : '○ Unverified seller'}
                   </Text>
                 </View>
                 <View style={styles.metaPill}>
@@ -4145,10 +4216,10 @@ function ProfileTab({
               ]}
             >
               {profile?.verificationStatus === 'verified'
-                ? 'Verified seller'
+                ? '✓ Verified seller'
                 : profile?.verificationStatus === 'pending'
-                  ? 'Verification pending'
-                  : 'Unverified seller'}
+                  ? '⏳ Verification pending'
+                  : '○ Unverified seller'}
             </Text>
           </View>
           <Text style={styles.listText}>
@@ -4595,7 +4666,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 28,
     fontWeight: '800',
-    maxWidth: 220,
   },
   badge: {
     backgroundColor: colors.cardAlt,
@@ -5049,6 +5119,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  progressTrack: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    color: colors.text,
+    fontSize: 19,
+    fontWeight: '800',
+  },
+  modalCloseButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  modalCloseText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   tabBar: {
     position: 'absolute',
     left: 14,
@@ -5065,8 +5174,9 @@ const styles = StyleSheet.create({
   tabButton: {
     flex: 1,
     borderRadius: 18,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
+    gap: 3,
   },
   tabButtonActive: {
     backgroundColor: colors.primary,

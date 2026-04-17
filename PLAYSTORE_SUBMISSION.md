@@ -14,12 +14,7 @@ Privacy policy URL after web deploy:
 
 ## Recommended Release Flow
 
-1. Push the latest release-ready code to `master`
-2. Build a release APK for final device testing
-3. Build an Android App Bundle (`.aab`) for Play Store upload
-4. Upload to Play Console internal testing first
-5. Verify sign-in, profile, hatch flow, marketplace flow, and notifications
-6. Promote to production only after internal testing passes
+
 
 ## GitHub Secrets Needed For Android Builds
 

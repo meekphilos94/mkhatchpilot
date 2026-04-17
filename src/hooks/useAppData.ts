@@ -29,7 +29,7 @@ import {
 import { getFirestoreDb } from '../lib/firebase';
 import { defaultReminderPreferences } from '../lib/notifications';
 import { fetchStoreCollection, getFallbackHatchCollection, lookupHatchPurchases } from '../lib/meekyCart';
-import { uploadMarketplaceImage } from '../lib/uploads';
+import { deleteMarketplaceImage, uploadMarketplaceImage } from '../lib/uploads';
 import { useFirebaseSession } from '../providers/FirebaseProvider';
 import {
   AppUser,
@@ -548,6 +548,8 @@ export function useAppData() {
     const publicListingQuery = query(
       collection(db, 'marketplaceListings'),
       where('status', '==', 'live'),
+      orderBy('createdAt', 'desc'),
+      limit(100),
     );
     const dailyLogQuery = query(
       collection(db, 'dailyLogs'),
@@ -643,11 +645,9 @@ export function useAppData() {
     const unsubscribePublicListings = onSnapshot(
       publicListingQuery,
       (snapshot) => {
-        const nextListings = snapshot.docs
-          .map((entry) =>
-            normalizeListing({ id: entry.id, ...(entry.data() as Omit<MarketplaceListing, 'id'>) }),
-          )
-          .sort((left, right) => right.id.localeCompare(left.id));
+        const nextListings = snapshot.docs.map((entry) =>
+          normalizeListing({ id: entry.id, ...(entry.data() as Omit<MarketplaceListing, 'id'>) }),
+        );
 
         setPublicMarketplaceListings(nextListings);
       },
@@ -1524,13 +1524,23 @@ export function useAppData() {
           throw new Error('Firestore is not available.');
         }
 
-        const imageUrl = input.imageAssetUri
-          ? await uploadMarketplaceImage({
-              ownerId: user.uid,
-              listingTitle: payload.title,
-              uri: input.imageAssetUri,
-            })
-          : input.existingImageUrl;
+        let imageUrl = input.existingImageUrl;
+
+        if (input.imageAssetUri) {
+          imageUrl = await uploadMarketplaceImage({
+            ownerId: user.uid,
+            listingTitle: payload.title,
+            uri: input.imageAssetUri,
+          });
+
+          if (input.existingImageUrl) {
+            try {
+              await deleteMarketplaceImage(input.existingImageUrl);
+            } catch {
+              // Old image deletion failure should not block the listing update.
+            }
+          }
+        }
 
         await updateDoc(doc(db, 'marketplaceListings', input.listingId), {
           ...payload,
@@ -1928,7 +1938,7 @@ export function useAppData() {
         const reviewedAt = new Date().toISOString();
         const writer = writeBatch(db);
         writer.update(doc(db, 'sellerVerificationRequests', input.requestId), {
-          status: 'approved',
+          status: input.status,
           reviewNotes: input.reviewNotes?.trim() || undefined,
           reviewedAt,
           reviewerId: user.uid,
@@ -1936,7 +1946,7 @@ export function useAppData() {
         writer.set(
           doc(db, 'users', input.userId),
           {
-            verificationStatus: 'verified',
+            verificationStatus: input.status === 'approved' ? 'verified' : 'unverified',
           },
           { merge: true },
         );
@@ -2084,7 +2094,17 @@ export function useAppData() {
           throw new Error('Firestore is not available.');
         }
 
+        const existingListing = marketplaceDrafts.find((listing) => listing.id === listingId);
         await deleteDoc(doc(db, 'marketplaceListings', listingId));
+
+        if (existingListing?.imageUrl) {
+          try {
+            await deleteMarketplaceImage(existingListing.imageUrl);
+          } catch {
+            // Image deletion failure should not block listing removal.
+          }
+        }
+
         return;
       }
 

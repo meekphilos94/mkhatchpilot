@@ -296,7 +296,7 @@ export interface SellerVerificationRequest {
   idDocumentReady: boolean;
   proofOfLocationReady: boolean;
   submittedAt: string;
-  status: 'submitted' | 'approved';
+  status: 'submitted' | 'approved' | 'rejected';
   reviewNotes?: string;
   reviewedAt?: string;
   reviewerId?: string;
@@ -312,6 +312,7 @@ export interface CreateSellerVerificationRequestInput {
 export interface ReviewSellerVerificationRequestInput {
   requestId: string;
   userId: string;
+  status: 'approved' | 'rejected';
   reviewNotes?: string;
 }
 

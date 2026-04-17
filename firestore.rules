@@ -165,10 +165,9 @@ service cloud.firestore {
         && request.resource.data.idDocumentReady is bool
         && request.resource.data.proofOfLocationReady is bool
         && request.resource.data.submittedAt is string
-        && request.resource.data.status in ['submitted', 'approved'];
-      allow update: if isAdmin()
+        && request.resource.data.status in ['submitted', 'approved', 'rejected'];
         && request.resource.data.userId == resource.data.userId
-        && request.resource.data.status in ['submitted', 'approved'];
+        && request.resource.data.status in ['submitted', 'approved', 'rejected'];
       allow delete: if false;
     }
   }

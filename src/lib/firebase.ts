@@ -60,12 +60,7 @@ export function getFirebaseAuth(): Auth | null {
     return null;
   }
 
-  try {
-    firebaseAuthInstance = getAuth(app);
-  } catch {
-    firebaseAuthInstance = getAuth(app);
-  }
-
+  firebaseAuthInstance = getAuth(app);
   return firebaseAuthInstance;
 }
 
