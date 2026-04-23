@@ -1,6 +1,6 @@
 import { StoreCollectionFeed, StoreHatchPurchase } from '../types/models';
 
-const DEFAULT_STORE_BASE_URL = 'https://meekycart.com';
+const DEFAULT_STORE_BASE_URL = 'https://farms.meekystore.co.zw';
 
 const fallbackHatchFeed: StoreCollectionFeed = {
   collection: {
